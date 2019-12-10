@@ -157,12 +157,12 @@ classdef GratingStim < BaseStim
             channel = cos(2*pi*freq(1)*cos(dir/180*pi).*x ...
                 + 2*pi*freq(1)*sin(dir/180*pi).*y ...
                 - 2*pi*freq(2).*t ...
-                + 2*pi*phase);
+				+ 2*pi*phase);
             channel = contrast.*channel/2 + 0.5;
 			
 			% flip X and Y
 			channel = permute(channel, [2 1 3]);
-			
+
 			% adjust for color
 			if obj.channels == 1
 				if mean(obj.colorVec) == 1
@@ -176,7 +176,7 @@ classdef GratingStim < BaseStim
 				sz = size(channel);
 				sinGrating = zeros([sz(1:2) obj.channels sz(3)]);
 				for c=1:obj.channels
-					sinGrating(:,:,c,:) = channel * obj.colorVec(c);
+					sinGrating(:,:,c,:) = channel* obj.colorVec(c) + (1-channel) * obj.backColor(c);
 				end
 			end
 			
@@ -202,6 +202,7 @@ classdef GratingStim < BaseStim
 			obj.stimType = eval(['obj.supportedStimTypes.' obj.name]);
 			obj.colorChar = 'w';
 			obj.colorVec = obj.char2rgb(obj.colorChar);
+			obj.backColor = obj.char2rgb('g')
         end
 	end
 
@@ -211,6 +212,7 @@ classdef GratingStim < BaseStim
         name;               % string describing the stimulus type
 		colorChar;          % single-character specifying stimulus color
 		colorVec;           % 3-element vector specifying stimulus color
+		backColor;
 		stimType;           % integer from obj.supportedStimTypes
     end
     

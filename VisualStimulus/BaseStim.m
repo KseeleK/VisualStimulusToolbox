@@ -206,8 +206,13 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
             disp([obj.baseMsgId ' - Successfully saved stimulus to ' ...
                 'file "' fileName '".'])
         end
-        
-        function plot(obj, frames, steppingMode)
+
+        function closeFigure(obj)
+            close
+            return
+        end
+
+        function plot(obj, frames, steppingMode, isTic)
             % stim.plot(frames, steppingMode), for 1-by-N vector FRAMES,
             % displays the specified frames in the current figure/axis
             % handle. If the flag STEPPINGMODE is set to true, the plot
@@ -233,14 +238,16 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
             % STEPPINGMODE - Flag whether to advance to the next frame
             %                automatically (false) or only by pressing
             %                arrow keys (true).
+            persistent tstart;
+            persistent plotCount;
+            if isTic tstart = tic; plotCount = 0; end 
             if nargin<2 || isempty(frames),frames=1:obj.length;end
             if nargin<3,steppingMode=false;end
-            
+            if nargin==4 frames=1:obj.length; steppingMode=false; end
             if ~numel(frames)
                 disp([obj.baseMsgId ' - Nothing to plot.'])
                 return
             end
-
             % reset abort flag, set up callback for key press events
             if obj.interactiveMode
                 obj.plotAbort = false;
@@ -248,11 +255,17 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
                 set(gcf,'KeyPressFcn',@obj.pauseOnKeyPressCallback)
             end
             
+            set(gcf, 'Units', 'pixels');
+            WindowAPI(gcf,'Position', 'full');
+
             % display frame in specified axes
             % use a while loop instead of a for loop so that we can
             % implement stepping backward
             idx = 1;
-            while idx <= numel(frames)
+            tElapsed = toc(tstart);
+            plotCount = plotCount + 1;
+            % while idx <= numel(frames)
+            while (tElapsed<=plotCount * 20) || (idx<=numel(frames))
                 if obj.interactiveMode && obj.plotAbort
                     close
                     return
@@ -263,15 +276,17 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
                 if obj.channels == 1
                     colormap gray
                 end
-                axis image
-                text(2, obj.height-5, num2str(frames(idx)), ...
-                    'FontSize', 10, 'BackgroundColor','white')
+                set(gca, 'Position',[0.0 0.0 1.0 1.0])
+                axis off
+                % text(2, obj.height-5, num2str(frames(idx)), ...
+                %     'FontSize', 10, 'BackgroundColor','white')
                 drawnow
                 
                 if obj.interactiveMode
-                    if idx>=numel(frames)
-                        waitforbuttonpress;
-                        close;
+                    % if idx>=numel(frames)
+                    if (tElapsed > plotCount * 20) || (idx >= numel(frames))
+                        % waitforbuttonpress;
+                        % close;
                         return;
                     else
                         if obj.plotStepMode
@@ -295,10 +310,12 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
                             pause(0.1)
                             idx = idx + 1;
                         end
+                        tElapsed = toc(tstart);
                     end
                 else
                     pause(0.1)
                     idx = idx + 1;
+                    tElapsed = toc(tstart);
                 end
             end
         end
@@ -589,6 +606,7 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
                     disp('Paused. Press any key to continue.');
                     waitforbuttonpress;
                 case 'q'
+                    close
                     obj.plotStepMode = false;
                     obj.plotAbort = true;
                 case 's'
@@ -598,14 +616,23 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
                             'with right arrow key, step backward with ' ...
                             'left arrow key.']);
                     end
-                case 'leftarrow'
-                    if obj.plotStepMode
-                        obj.plotStepBW = true;
+                case 'return'
+                    try
+                        set(gcf, 'Units', 'pixels');
+                        WindowAPI(gcf,'Position', 'full');
+                    catch causeException
+                        throw(causeException);
                     end
-                case 'rightarrow'
-                    if obj.plotStepMode
-                        obj.plotStepFW = true;
-                    end
+                case 'escape'
+                    WindowAPI(gcf,'Maximize');
+                % case 'leftarrow'
+                %     if obj.plotStepMode
+                %         obj.plotStepBW = true;
+                %     end
+                % case 'rightarrow'
+                %     if obj.plotStepMode
+                %         obj.plotStepFW = true;
+                %     end
                 otherwise
             end
 		end
@@ -673,7 +700,9 @@ classdef (Abstract) BaseStim < matlab.mixin.Copyable
         baseMsgId;          % string prepended to error messages
         name;               % string describing the stimulus type
 		colorChar;          % single-character specifying stimulus color
-		colorVec;           % 3-element vector specifying stimulus color
+        colorVec;           % 3-element vector specifying stimulus color
+        backColor;
 		stimType;           % integer from obj.supportedStimTypes
     end
+
 end

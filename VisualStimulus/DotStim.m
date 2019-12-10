@@ -371,7 +371,8 @@ classdef DotStim < BaseStim
         baseMsgId;          % string prepended to error messages
         name;               % string describing the stimulus type
 		colorChar;          % single-character specifying stimulus color
-		colorVec;           % 3-element vector specifying stimulus color
+        colorVec;           % 3-element vector specifying stimulus color
+        backColor;
 		stimType;           % integer from obj.supportedStimTypes
     end
     
